@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo</title>
+</head>
+<body>
+  <div id="svg-container" style="border: 1px solid #ccc;"></div>
+  <button id="export-btn">导出选框区域</button>
+  <button id="rect-btn">绘制矩形批注</button>
+  <button id="line-btn">绘制线形批注</button>
+</body>
+<script type="module">
+  import { SVG } from '@svgdotjs/svg.js';
+  import { Canvg } from 'canvg';
+  // 1. 初始化 SVG 画布
+  const draw = SVG().addTo('#svg-container').size(800, 600);
+  let selectionBox = null;
+  let startPoint = { x: 0, y: 0 };
+  let isDrawing = false;
+
+  // 2. 添加示例图形（矩形、圆形、文本）
+  draw.rect(100, 100).move(50, 50).fill('#f06');
+  draw.circle(80).move(200, 100).fill('#69f');
+  draw.text('SVG.js 截图示例').move(300, 200).font({ size: 20 });
+
+  // 3. 鼠标事件：绘制选框
+  draw.on('mousedown', (e) => {
+    isDrawing = true;
+    startPoint = { x: e.clientX, y: e.clientY };
+    selectionBox = draw.rect(0, 0).fill('rgba(0, 100, 255, 0.2)').stroke({ width: 1, color: '#0064ff' });
+  });
+
+  draw.on('mousemove', (e) => {
+    if (!isDrawing) return;
+    const width = e.clientX - startPoint.x;
+    const height = e.clientY - startPoint.y;
+    selectionBox
+      .width(Math.abs(width))
+      .height(Math.abs(height))
+      .x(width > 0 ? startPoint.x : e.clientX)
+      .y(height > 0 ? startPoint.y : e.clientY);
+  });
+
+  draw.on('mouseup', () => {
+    isDrawing = false;
+  });
+
+  // 4. 导出选框区域
+  document.getElementById('export-btn').addEventListener('click', async () => {
+    if (!selectionBox || selectionBox.width() === 0) {
+      alert('请先拖动鼠标框选区域！');
+      return;
+    }
+
+    // 获取选框的坐标和尺寸
+    const x = selectionBox.x();
+    const y = selectionBox.y();
+    const width = selectionBox.width();
+    const height = selectionBox.height();
+
+    // 创建一个临时 SVG，仅包含选框范围内的内容
+    const svgClone = draw.clone();
+    svgClone.viewbox(x, y, width, height); // 关键：设置 viewBox 裁剪区域
+
+    // 移除选框（避免出现在导出的图片中）
+    svgClone.find('rect').forEach(rect => {
+      if (rect === selectionBox) rect.remove();
+    });
+    console.log(svgClone);
+    return;
+
+    // 获取 SVG 的 HTML 字符串
+    const svgHTML = svgClone.node.outerHTML;
+
+    // 创建 Canvas 并渲染 SVG
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    // 使用 canvg 渲染 SVG
+    const canvgInstance = await Canvg.from(ctx, svgHTML);
+    await canvgInstance.render();
+
+    // 导出为 PNG
+    const pngData = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = pngData;
+    link.download = 'cropped-svg.png';
+    link.click();
+
+    // 清理临时 SVG
+    svgClone.remove();
+    selectionBox.remove();
+  });
+</script>
+</html>

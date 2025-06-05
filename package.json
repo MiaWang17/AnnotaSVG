@@ -1,0 +1,19 @@
+{
+  "name": "svg-share",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite"
+  },
+  "author": "wangzh",
+  "license": "ISC",
+  "dependencies": {
+    "@svgdotjs/svg.js": "^3.2.4",
+    "canvg": "^4.0.3"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

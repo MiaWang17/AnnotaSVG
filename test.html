@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>自用</title>
+</head>
+<style>
+  #svg-container {
+    width: 90vw;
+    height: 90vh;
+    border: 1px solid blueviolet;
+    box-sizing: border-box;
+  }
+
+</style>
+<body>
+  <div id="svg-container"></div>
+</body>
+<script type="module">
+  import { SVG } from '@svgdotjs/svg.js'
+  // 创建SVG画布
+  const draw = SVG().addTo('#svg-container').size('100%', '100%');
+
+  // 定义箭头标记（marker）
+  const defs = draw.defs();
+
+  const arrowMarker = defs.marker(10, 10, function(add) {
+    add.path('M0,0 L0,10 L10,5 Z') // 三角形箭头头部
+      .fill('#000'); // 填充颜色
+  });
+
+  // 画一条带箭头的线
+  draw.line(50, 50, 300, 200)
+    .stroke({ width: 2, color: '#000' })
+    .marker('end', arrowMarker);
+
+  // 使用自定义的箭头标记，定创建一个自定义带箭头的线模版
+  const arrowLineSymbol = draw.symbol()
+    .line(0, 0, 100, 0)
+    .stroke({ width: 2, color: '#000' })
+    .marker('end', arrowMarker); // 直接引用已定义的 marker
+
+  draw.use(arrowLineSymbol).move(50, 50);
+
+  function createArrowLine(x1, y1, x2, y2, color = '#000', size = 10) {
+    const marker = draw.marker(size, size, function(add) {
+      const halfSize = size / 2;
+      add.path(`M0,0 L0,${size} L${size},${halfSize} Z`)
+        .fill(color);
+    });
+
+    return draw.line(x1, y1, x2, y2)
+      .stroke({ width: 2, color })
+      .marker('end', marker);
+  }
+
+  createArrowLine(50, 100, 300, 300, '#f00', 20);
+
+  // 折线
+  // draw.polyline([[50, 500], [60, 540], [100, 550], [60, 560], [50, 600], [40, 560], [0, 550], [40, 540]])
+  //   .fill('none')
+  //   .stroke({ width: 2, color: '#f00' });
+
+  // 多边形
+  // draw.polygon([[50, 500], [60, 540], [100, 550], [60, 560], [50, 600], [40, 560], [0, 550], [40, 540]])
+  //   .fill('none')
+  //   .stroke({ width: 2, color: '#f00' });
+  
+  draw.polygon([[50, 600], [150, 600], [150, 700], [50, 700]])
+
+  draw.polygon([[200, 600], [300, 650], [200, 700]]).fill('#f00')
+
+  // 直线
+  const line = draw.line(500, 50, 600, 150).stroke({ width: 5, color: 'pink' });
+  // line.plot(600, 50, 600, 150)
+  // line.plot([[600, 50], [600, 150]])
+</script>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Container Element</title>
+</head>
+<style>
+  #svg-container {
+    width: 80vw;
+    height: 80vh;
+    border: 1px solid blueviolet;
+  }
+</style>
+<body>
+  <div id="svg-container"></div>
+</body>
+<script type="module"> 
+  import { SVG } from '@svgdotjs/svg.js';
+  
+  const draw = SVG().addTo('#svg-container').size('100%', '100%');
+  // draw.rect(100, 100).attr({ fill: 'pink' });
+  // // 嵌套文档
+  const nested = draw.nested();
+  const nestedRect = nested.rect(100, 100).attr({ fill: '#f06' }).move(100, 100);
+
+
+  // const g = draw.group();
+  // g.rect(100, 100).attr({ fill: '#f90' }).move(200, 200);
+  // g.rect(100, 100).attr({ fill: '#09f' }).move(400, 200);
+  // g.add(rect)
+
+  // const symbol1 = draw.symbol()
+  // const symbol1Rect = symbol1.rect(100, 100).attr({ fill: '#f0f' })
+  // symbol1.circle(100);
+  
+  // const circle = draw.symbol().circle(100).attr({ fill: '#0f0' });
+  // const text = draw.symbol().text('Hello World').attr({ fill: '#f00' });
+
+  // draw.use(symbol1).move(300, 300);
+  
+  // const defs = draw.defs();
+  // const defsRect = defs.rect(100, 100).attr({ fill: '#f0f' });
+
+  // draw.use(defsRect);
+
+  // ------  defs 不能分组，只能用来隐藏元素 --------
+
+  // const rect = draw.rect(100, 100).attr({ fill: 'pink' });
+  // const root = rect.root();
+  // const defs = rect.root().defs();
+  // const defsRect = defs.rect(100, 100).attr({ fill: '#f0f' });
+  // draw.use(defsRect).move(100, 100);
+
+  // console.log('根元素', rect.root() === nestedRect.root())
+</script>
+</script>
+</html>

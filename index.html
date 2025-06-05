@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SVG批注与截图工具</title>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    button {
+      padding: 8px 15px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    #svg-container {
+      border: 1px solid #ccc;
+      background-color: #f9f9f9;
+      width: 60%;
+    }
+    .active-mode {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .container {
+      display: flex;
+      margin-top: 10px;
+      justify-content: space-between;
+    }
+    .img-container {
+      border: 1px solid #ccc;
+      width: 38%;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <h2>SVG批注与截图工具</h2>
+  <div>
+    <button id="select-btn">截图模式</button>
+    <button id="rect-btn">矩形批注</button>
+    <button id="line-btn">线条批注</button>
+    <button id="conform-btn">确认截图</button>
+    <button id="clear-btn">清除批注</button>
+  </div>
+  <div class="container">
+    <div id="svg-container"></div>
+    <div class="img-container"></div>
+  </div>
+
+<script type="module">
+  import { SVG } from '@svgdotjs/svg.js';
+
+  // 初始化SVG画布
+  const draw = SVG().addTo('#svg-container').size('100%', '80vh');
+  
+  // 状态变量
+  let selectionBox = null;
+  let startPoint = { x: 0, y: 0 };
+  let isDrawing = false;
+  let currentMode = 'select';
+  let currentAnnotation = null;
+  
+  // 获取校真正的鼠标位置（鼠标坐标系，和SVG容器的坐标系是两套，相互独立）
+  function getCorrectPosition(e) {
+    const svgContainer = document.getElementById('svg-container');
+    const rect = svgContainer.getBoundingClientRect(); //  获取SVG容器的边界矩形信息
+    
+    // 计算相对于SVG容器的坐标
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }
+
+  // 鼠标事件处理
+  draw.on('mousedown', (e) => {
+    const point = getCorrectPosition(e);  // 使用校正后的位置
+    startPoint = point;
+    
+    switch(currentMode) {
+      case 'select':
+        isDrawing = true;
+        selectionBox = draw.rect(0, 0)
+          .fill('rgba(0, 100, 255, 0.2)')
+          .stroke({ width: 1, color: '#0064ff' });
+        break;
+        
+      case 'rect':
+        isDrawing = true;
+        currentAnnotation = draw.rect(0, 0)
+          .fill('rgba(255, 0, 0, 0.2)')
+          .stroke({ width: 2, color: 'red' })
+          .attr('class', 'annotation');
+        break;
+        
+      case 'line':
+        isDrawing = true;
+        currentAnnotation = draw.line(point.x, point.y, point.x, point.y)
+          .stroke({ width: 2, color: 'red' })
+          .attr('class', 'annotation');
+        break;
+    }
+  });
+
+  draw.on('mousemove', (e) => {
+    if (!isDrawing) return;
+    
+    const point = getCorrectPosition(e);  // 使用校正后的位置
+    const width = point.x - startPoint.x;
+    const height = point.y - startPoint.y;
+    
+    switch(currentMode) {
+      case 'select':
+        selectionBox
+          .width(Math.abs(width))
+          .height(Math.abs(height))
+          .x(width > 0 ? startPoint.x : point.x)
+          .y(height > 0 ? startPoint.y : point.y);
+        break;
+        
+      case 'rect':
+        currentAnnotation
+          .width(Math.abs(width))
+          .height(Math.abs(height))
+          .x(width > 0 ? startPoint.x : point.x)
+          .y(height > 0 ? startPoint.y : point.y);
+        break;
+        
+      case 'line':
+        currentAnnotation.plot([startPoint.x, startPoint.y, point.x, point.y]);
+        break;
+    }
+  });
+
+  draw.on('mouseup', () => {
+    isDrawing = false;
+  });
+
+  // 导出选区为图片
+  document.getElementById('conform-btn').addEventListener('click', async () => {
+    if (!selectionBox || selectionBox.width() === 0) {
+      alert('请先使用选择模式框选要导出的区域！');
+      return;
+    }
+
+    const x = selectionBox.x();
+    const y = selectionBox.y();
+    const width = selectionBox.width();
+    const height = selectionBox.height();
+
+    // 临时隐藏选择框
+    selectionBox.opacity(0);
+    
+    try {
+      const canvas = await html2canvas(document.querySelector('#svg-container'), {
+        x: x, // 起始 X 坐标
+        y: y, // 起始 Y 坐标
+        width: width, // 区域宽度
+        height: height, // 区域高度
+        scale: 1, // 高清截图（2倍分辨率）
+        logging: false, // 关闭日志
+        useCORS: true, // 允许跨域请求
+        allowTaint: true // 允许canvas被污染
+      });
+      
+      // 恢复选择框显示
+      selectionBox.opacity(1);
+      
+      // 创建img表亲
+      const pngData = canvas.toDataURL('image/png');
+      const img = document.createElement('img');
+      img.src = pngData;
+      // 将img添加到img-container中
+      document.querySelector('.img-container').appendChild(img);
+      // 移除selectionBox
+      clearSelectionBox()
+      
+    } catch (error) {
+      console.error('截图失败:', error);
+      if (selectionBox) selectionBox.opacity(1);
+      alert('截图失败，请重试！');
+    }
+  });
+
+  // 清除selectionBox
+  function clearSelectionBox() {
+    if (selectionBox) {
+      selectionBox.remove();
+      selectionBox = null;
+    }
+  }
+
+  // 模式切换按钮
+  document.getElementById('select-btn').addEventListener('click', () => {
+    currentMode = 'select';
+    updateButtonStates();
+  });
+
+  document.getElementById('rect-btn').addEventListener('click', () => {
+    currentMode = 'rect';
+    updateButtonStates();
+  });
+
+  document.getElementById('line-btn').addEventListener('click', () => {
+    currentMode = 'line';
+    updateButtonStates();
+  });
+
+  // 清除所有批注
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    draw.find('.annotation').forEach(el => el.remove());
+  });
+
+  // 更新按钮状态
+  function updateButtonStates() {
+    document.querySelectorAll('button').forEach(btn => {
+      btn.classList.remove('active-mode');
+    });
+    
+    switch(currentMode) {
+      case 'select':
+        document.getElementById('select-btn').classList.add('active-mode');
+        break;
+      case 'rect':
+        document.getElementById('rect-btn').classList.add('active-mode');
+        break;
+      case 'line':
+        document.getElementById('line-btn').classList.add('active-mode');
+        break;
+    }
+  }
+
+  // 初始化按钮状态
+  updateButtonStates();
+
+</script>
+</html>
